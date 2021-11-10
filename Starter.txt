@@ -1,0 +1,2 @@
+Die eigentlichen Polygondateien, die wir zum Training genutzt haben, können wir leider nicht zur Verfügung stellen.
+Eine Bsp-Datei "a.JSON" ist angefügt. Nach diesem Modell müsste man sich Trainings- und Testdaten zusammen bauen.

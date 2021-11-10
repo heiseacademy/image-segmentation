@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='utf-8' />
+    <title>Display map</title>
+    <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+    <script type=text/javascript>$SCRIPT_ROOT = "http://127.0.0.1:5000";</script>
+    <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.44.1/mapbox-gl.js'></script>
+    <script src="https://api.mapbox.com/mapbox-gl-js/v1.12.0/mapbox-gl.js"></script>
+    <script src="https://api.tiles.mapbox.com/mapbox.js/plugins/turf/v3.0.11/turf.min.js"></script>
+    <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-draw/v1.2.0/mapbox-gl-draw.js"></script>
+    <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v1.12.0/mapbox-gl.css' rel='stylesheet' />
+    <link href='https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-draw/v1.2.0/mapbox-gl-draw.css' rel='stylesheet' />
+    <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+    <style>
+        #map{
+            margin: auto;
+            width: 600px;
+            height: 600px;
+        }
+        #additions, #info{
+            margin: auto;
+            font-size:22px;
+            width: 600px;
+        }    
+    </style>
+</head>
+
+<body>
+
+<div id='map'></div>
+<div id="additions">
+    <a id="downloadLink" href="" download="map.png";>Bild herunterladen ...</a>
+</div>
+
+<div id="image">   </div>
+<pre id="info"></pre>
+
+<script>
+    
+    mapboxgl.accessToken = 'pk.iwiYSI6ImNrZ3h2YzFmZjBid3oyeHBjcmRqbWhnMGwifQ.5ibyVVTYGTqgnOM2CqTVzQ';
+    var map = new mapboxgl.Map({
+        container: 'map',
+        style: 'mapbox://styles/mapbox/satellite-v9',
+        center: [-1.7266810507824175, 51.87186955711121],
+        zoom: 14,
+        preserveDrawingBuffer: true
+    });
+    
+    function get_point_from_coordinate(lng, lat){
+        var langlat = {"lng":lng, "lat":lat}
+        var point = map.project(langlat)
+        var x = point["x"]
+        var y = point["y"]
+        return [x, y]
+    }
+
+    function get_coordinate_from_point(x, y){
+        var point = {"x":x, "y":y};
+        var coordinate = map.unproject(point)
+        var lng = coordinate["lng"]
+        var lat = coordinate["lat"]
+        return [lng, lat]
+    }
+    
+    map.on('click', function (e) {
+        var x = e.point["x"]
+        var y = e.point["y"]
+        var [lng, lat] = get_coordinate_from_point(x, y);
+        console.log("Clickpoint: "+x+", "+y)
+        var img = map.getCanvas().toDataURL('image/png')
+        send_clickpoint(x,y,img);
+    });
+
+    function send_clickpoint(x,y,img){
+        $.post($SCRIPT_ROOT + '/_receive_clickpoint', JSON.stringify({
+                'x': x,
+                'y': y,
+                'img': img
+            }), function(data) {
+                console.log(JSON.stringify(data.result))
+                var feature = {
+                    id: 'unique-id',
+                    type: 'Feature',
+                    properties: {},
+                    geometry: { type: 'Polygon', 
+                    coordinates: [[
+                        ]]
+                    }
+                };
+                var i;
+                for (i = 0; i < data.result["ic"].length; i++) {
+                        feature.geometry.coordinates[0].push(get_coordinate_from_point(data.result["ic"][i][0], data.result["ic"][i][1]))
+                    }
+                feature.geometry.coordinates[0].push(get_coordinate_from_point(data.result["ic"][0][0], data.result["ic"][0][1]))
+                var featureId = draw.add(feature);
+        });
+    }
+
+    $('#downloadLink').click(function() {
+        var img = map.getCanvas().toDataURL('image/png')
+        this.href = img
+    })
+
+    map.on('mousemove', function (e) {
+        document.getElementById('info').innerHTML =
+        JSON.stringify(e.point) +
+        '<br />' +
+        JSON.stringify(e.lngLat.wrap());
+    });
+    
+    var draw = new MapboxDraw({
+        displayControlsDefault: false,
+        controls: {
+            polygon: true,
+            trash: true
+        }
+    });
+    map.addControl(draw);
+
+</script>
+</body>
+</html>
